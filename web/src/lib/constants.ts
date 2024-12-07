@@ -9,6 +9,7 @@ export enum AssetAction {
   ADD = 'add',
   ADD_TO_ALBUM = 'add-to-album',
   UNSTACK = 'unstack',
+  KEEP_THIS_DELETE_OTHERS = 'keep-this-delete-others',
 }
 
 export enum AppRoute {
@@ -81,6 +82,11 @@ export enum QueryParameter {
   SMART_SEARCH = 'smartSearch',
   PAGE = 'page',
   PATH = 'path',
+}
+
+export enum SessionStorageKey {
+  INFINITE_SCROLL_PAGE = 'infiniteScrollPage',
+  SCROLL_POSITION = 'scrollPosition',
 }
 
 export enum OpenSettingQueryParameterValue {
