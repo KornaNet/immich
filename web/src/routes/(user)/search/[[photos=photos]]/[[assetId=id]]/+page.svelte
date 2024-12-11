@@ -15,6 +15,8 @@
   import AssetSelectControlBar from '$lib/components/photos-page/asset-select-control-bar.svelte';
   import ControlAppBar from '$lib/components/shared-components/control-app-bar.svelte';
   import GalleryViewer from '$lib/components/shared-components/gallery-viewer/gallery-viewer.svelte';
+  import { cancelMultiselect } from '$lib/utils/asset-utils';
+  import { createAssetInteractionStore } from '$lib/stores/asset-interaction.store';
   import SearchBar from '$lib/components/shared-components/search-bar/search-bar.svelte';
   import { AppRoute, QueryParameter } from '$lib/constants';
   import { assetViewingStore } from '$lib/stores/asset-viewing.store';
@@ -22,8 +24,8 @@
   import { shortcut } from '$lib/actions/shortcut';
   import {
     type AssetResponseDto,
+    searchAssets,
     searchSmart,
-    searchMetadata,
     getPerson,
     type SmartSearchDto,
     type MetadataSearchDto,
@@ -42,6 +44,8 @@
   import { t } from 'svelte-i18n';
   import { onMount, tick } from 'svelte';
   import AssetJobActions from '$lib/components/photos-page/actions/asset-job-actions.svelte';
+  import { preferences, user } from '$lib/stores/user.store';
+  import TagAction from '$lib/components/photos-page/actions/tag-action.svelte';
 
   const MAX_ASSET_COUNT = 5000;
   let { isViewing: showAssetViewer } = assetViewingStore;
@@ -58,13 +62,15 @@
   let isLoading = $state(true);
   let scrollY = $state(0);
   let scrollYHistory = 0;
-  let selectedAssets: Set<AssetResponseDto> = $state(new Set());
+
+  const assetInteractionStore = createAssetInteractionStore();
+  const { selectedAssets } = assetInteractionStore;
 
   type SearchTerms = MetadataSearchDto & Pick<SmartSearchDto, 'query'>;
 
-  let isMultiSelectionMode = $derived(selectedAssets.size > 0);
-  let isAllArchived = $derived([...selectedAssets].every((asset) => asset.isArchived));
-  let isAllFavorite = $derived([...selectedAssets].every((asset) => asset.isFavorite));
+  let isMultiSelectionMode = $derived($selectedAssets.size > 0);
+  let isAllArchived = $derived([...$selectedAssets].every((asset) => asset.isArchived));
+  let isAllFavorite = $derived([...$selectedAssets].every((asset) => asset.isFavorite));
   let searchQuery = $derived($page.url.searchParams.get(QueryParameter.QUERY));
 
   onMount(() => {
@@ -81,7 +87,7 @@
     }
 
     if (isMultiSelectionMode) {
-      selectedAssets = new Set();
+      $selectedAssets = new Set();
       return;
     }
     if (!$preventRaceConditionSearchBar) {
@@ -125,7 +131,7 @@
     searchResultAssets = searchResultAssets.filter((a: AssetResponseDto) => !assetIdSet.has(a.id));
   };
   const handleSelectAll = () => {
-    selectedAssets = new Set(searchResultAssets);
+    assetInteractionStore.selectAssets(searchResultAssets);
   };
 
   async function onSearchQueryUpdate() {
@@ -152,7 +158,7 @@
       const { albums, assets } =
         'query' in searchDto && $featureFlags.smartSearch
           ? await searchSmart({ smartSearchDto: searchDto })
-          : await searchMetadata({ metadataSearchDto: searchDto });
+          : await searchAssets({ metadataSearchDto: searchDto });
 
       searchResultAlbums.push(...albums.items);
       searchResultAssets.push(...assets.items);
@@ -216,13 +222,16 @@
   const triggerAssetUpdate = () => (searchResultAssets = searchResultAssets);
 
   const onAddToAlbum = (assetIds: string[]) => {
-    const assetIdSet = new Set(assetIds);
-    searchResultAssets = searchResultAssets.filter((a: AssetResponseDto) => !assetIdSet.has(a.id));
+    if (terms.isNotInAlbum.toString() == 'true') {
+      const assetIdSet = new Set(assetIds);
+      searchResultAssets = searchResultAssets.filter((a: AssetResponseDto) => !assetIdSet.has(a.id));
+    }
   };
 
   function getObjectKeys<T extends object>(obj: T): (keyof T)[] {
     return Object.keys(obj) as (keyof T)[];
   }
+  let isAllUserOwned = $derived([...$selectedAssets].every((asset) => asset.ownerId === $user.id));
 </script>
 
 <svelte:window use:shortcut={{ shortcut: { key: 'Escape' }, onShortcut: onEscape }} bind:scrollY />
@@ -230,7 +239,7 @@
 <section>
   {#if isMultiSelectionMode}
     <div class="fixed z-[100] top-0 left-0 w-full">
-      <AssetSelectControlBar assets={selectedAssets} clearSelect={() => (selectedAssets = new Set())}>
+      <AssetSelectControlBar assets={$selectedAssets} clearSelect={() => cancelMultiselect(assetInteractionStore)}>
         <CreateSharedLink />
         <CircleIconButton title={$t('select_all')} icon={mdiSelectAll} onclick={handleSelectAll} />
         <ButtonContextMenu icon={mdiPlus} title={$t('add_to')}>
@@ -244,6 +253,9 @@
           <ChangeDate menuItem />
           <ChangeLocation menuItem />
           <ArchiveAction menuItem unarchive={isAllArchived} onArchive={triggerAssetUpdate} />
+          {#if $preferences.tags.enabled && isAllUserOwned}
+            <TagAction menuItem />
+          {/if}
           <DeleteAssets menuItem {onAssetDelete} />
           <hr />
           <AssetJobActions />
@@ -321,7 +333,7 @@
       {#if searchResultAssets.length > 0}
         <GalleryViewer
           assets={searchResultAssets}
-          bind:selectedAssets
+          {assetInteractionStore}
           onIntersected={loadNextPage}
           showArchiveIcon={true}
           {viewport}
