@@ -8,15 +8,15 @@
   import TreeItems from '$lib/components/shared-components/tree/tree-items.svelte';
   import { AppRoute, QueryParameter } from '$lib/constants';
   import type { Viewport } from '$lib/stores/assets.store';
-  import { foldersStore } from '$lib/stores/folders.store';
+  import { foldersStore } from '$lib/stores/folders.svelte';
   import { buildTree, normalizeTreePath } from '$lib/utils/tree-utils';
-  import { type AssetResponseDto } from '@immich/sdk';
   import { mdiFolder, mdiFolderHome, mdiFolderOutline } from '@mdi/js';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
   import Breadcrumbs from '$lib/components/shared-components/tree/breadcrumbs.svelte';
   import SkipLink from '$lib/components/elements/buttons/skip-link.svelte';
+  import { AssetInteraction } from '$lib/stores/asset-interaction.svelte';
 
   interface Props {
     data: PageData;
@@ -24,13 +24,14 @@
 
   let { data }: Props = $props();
 
-  let selectedAssets: Set<AssetResponseDto> = $state(new Set());
   const viewport: Viewport = $state({ width: 0, height: 0 });
 
   let pathSegments = $derived(data.path ? data.path.split('/') : []);
-  let tree = $derived(buildTree($foldersStore?.uniquePaths || []));
+  let tree = $derived(buildTree(foldersStore.uniquePaths));
   let currentPath = $derived($page.url.searchParams.get(QueryParameter.PATH) || '');
   let currentTreeItems = $derived(currentPath ? data.currentFolders : Object.keys(tree));
+
+  const assetInteraction = new AssetInteraction();
 
   onMount(async () => {
     await foldersStore.fetchUniquePaths();
@@ -41,7 +42,7 @@
   };
 
   const getLink = (path: string) => {
-    const url = new URL(AppRoute.FOLDERS, window.location.href);
+    const url = new URL(AppRoute.FOLDERS, globalThis.location.href);
     if (path) {
       url.searchParams.set(QueryParameter.PATH, path);
     }
@@ -79,7 +80,7 @@
       <div bind:clientHeight={viewport.height} bind:clientWidth={viewport.width} class="mt-2">
         <GalleryViewer
           assets={data.pathAssets}
-          bind:selectedAssets
+          {assetInteraction}
           {viewport}
           disableAssetSelect={true}
           showAssetName={true}

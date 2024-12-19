@@ -6,7 +6,7 @@
   import { downloadArchive } from '$lib/utils/asset-utils';
   import { fileUploadHandler, openFileUploadDialog } from '$lib/utils/file-uploader';
   import { handleError } from '$lib/utils/handle-error';
-  import { addSharedLinkAssets, type AssetResponseDto, type SharedLinkResponseDto } from '@immich/sdk';
+  import { addSharedLinkAssets, type SharedLinkResponseDto } from '@immich/sdk';
   import { mdiArrowLeft, mdiFileImagePlusOutline, mdiFolderDownloadOutline, mdiSelectAll } from '@mdi/js';
   import CircleIconButton from '../elements/buttons/circle-icon-button.svelte';
   import DownloadAction from '../photos-page/actions/download-action.svelte';
@@ -14,10 +14,12 @@
   import AssetSelectControlBar from '../photos-page/asset-select-control-bar.svelte';
   import ControlAppBar from '../shared-components/control-app-bar.svelte';
   import GalleryViewer from '../shared-components/gallery-viewer/gallery-viewer.svelte';
+  import { cancelMultiselect } from '$lib/utils/asset-utils';
   import ImmichLogoSmallLink from '$lib/components/shared-components/immich-logo-small-link.svelte';
   import { NotificationType, notificationController } from '../shared-components/notification/notification';
   import type { Viewport } from '$lib/stores/assets.store';
   import { t } from 'svelte-i18n';
+  import { AssetInteraction } from '$lib/stores/asset-interaction.svelte';
 
   interface Props {
     sharedLink: SharedLinkResponseDto;
@@ -27,11 +29,10 @@
   let { sharedLink = $bindable(), isOwned }: Props = $props();
 
   const viewport: Viewport = $state({ width: 0, height: 0 });
-  let selectedAssets: Set<AssetResponseDto> = $state(new Set());
+  const assetInteraction = new AssetInteraction();
   let innerWidth: number = $state(0);
 
   let assets = $derived(sharedLink.assets);
-  let isMultiSelectionMode = $derived(selectedAssets.size > 0);
 
   dragAndDropFilesStore.subscribe((value) => {
     if (value.isDragging && value.files.length > 0) {
@@ -70,15 +71,18 @@
   };
 
   const handleSelectAll = () => {
-    selectedAssets = new Set(assets);
+    assetInteraction.selectAssets(assets);
   };
 </script>
 
 <svelte:window bind:innerWidth />
 
 <section class="bg-immich-bg dark:bg-immich-dark-bg">
-  {#if isMultiSelectionMode}
-    <AssetSelectControlBar assets={selectedAssets} clearSelect={() => (selectedAssets = new Set())}>
+  {#if assetInteraction.selectionActive}
+    <AssetSelectControlBar
+      assets={assetInteraction.selectedAssets}
+      clearSelect={() => cancelMultiselect(assetInteraction)}
+    >
       <CircleIconButton title={$t('select_all')} icon={mdiSelectAll} onclick={handleSelectAll} />
       {#if sharedLink?.allowDownload}
         <DownloadAction filename="immich-shared.zip" />
@@ -109,6 +113,6 @@
     </ControlAppBar>
   {/if}
   <section class="my-[160px] mx-4" bind:clientHeight={viewport.height} bind:clientWidth={viewport.width}>
-    <GalleryViewer {assets} bind:selectedAssets {viewport} />
+    <GalleryViewer {assets} {assetInteraction} {viewport} />
   </section>
 </section>

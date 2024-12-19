@@ -13,6 +13,7 @@
   import ShareAction from '$lib/components/asset-viewer/actions/share-action.svelte';
   import ShowDetailAction from '$lib/components/asset-viewer/actions/show-detail-action.svelte';
   import UnstackAction from '$lib/components/asset-viewer/actions/unstack-action.svelte';
+  import KeepThisDeleteOthersAction from '$lib/components/asset-viewer/actions/keep-this-delete-others.svelte';
   import CircleIconButton from '$lib/components/elements/buttons/circle-icon-button.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/button-context-menu.svelte';
   import MenuOption from '$lib/components/shared-components/context-menu/menu-option.svelte';
@@ -99,10 +100,7 @@
   <div class="text-white">
     <CloseAction {onClose} />
   </div>
-  <div
-    class="flex w-[calc(100%-3rem)] justify-end gap-2 overflow-hidden text-white"
-    data-testid="asset-viewer-navbar-actions"
-  >
+  <div class="flex gap-2 overflow-x-auto text-white" data-testid="asset-viewer-navbar-actions">
     {#if !asset.isTrashed && $user}
       <ShareAction {asset} />
     {/if}
@@ -166,6 +164,7 @@
         {#if isOwner}
           {#if stack}
             <UnstackAction {stack} {onAction} />
+            <KeepThisDeleteOthersAction {stack} {asset} {onAction} />
           {/if}
           {#if album}
             <SetAlbumCoverAction {asset} {album} />
