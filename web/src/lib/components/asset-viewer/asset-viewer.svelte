@@ -30,6 +30,7 @@
     type ActivityResponseDto,
     type AlbumResponseDto,
     type AssetResponseDto,
+    type PersonResponseDto,
     type StackResponseDto,
   } from '@immich/sdk';
   import { onDestroy, onMount, untrack } from 'svelte';
@@ -56,6 +57,7 @@
     withStacked?: boolean;
     isShared?: boolean;
     album?: AlbumResponseDto | null;
+    person?: PersonResponseDto | null;
     onAction?: OnAction | undefined;
     reactions?: ActivityResponseDto[];
     onClose: (dto: { asset: AssetResponseDto }) => void;
@@ -72,6 +74,7 @@
     withStacked = false,
     isShared = false,
     album = null,
+    person = null,
     onAction = undefined,
     reactions = $bindable([]),
     onClose,
@@ -379,6 +382,7 @@
         break;
       }
 
+      case AssetAction.KEEP_THIS_DELETE_OTHERS:
       case AssetAction.UNSTACK: {
         closeViewer();
       }
@@ -393,6 +397,7 @@
   let isFullScreen = $derived(fullscreenElement !== null);
   $effect(() => {
     if (asset) {
+      previewStackedAsset = undefined;
       handlePromiseError(refreshStack());
     }
   });
@@ -427,6 +432,7 @@
       <AssetViewerNavBar
         {asset}
         {album}
+        {person}
         {stack}
         showDetailButton={enableDetailPanel}
         showSlideshow={!!assetStore}

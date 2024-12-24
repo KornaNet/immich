@@ -68,11 +68,8 @@ const validateRange = (value: number | undefined, min: number, max: number): Non
 
 @Injectable()
 export class MetadataService extends BaseService {
-  @OnEvent({ name: 'app.bootstrap' })
+  @OnEvent({ name: 'app.bootstrap', workers: [ImmichWorker.MICROSERVICES] })
   async onBootstrap() {
-    if (this.worker !== ImmichWorker.MICROSERVICES) {
-      return;
-    }
     this.logger.log('Bootstrapping metadata service');
     await this.init();
   }
@@ -701,7 +698,7 @@ export class MetadataService extends BaseService {
       return JobStatus.FAILED;
     }
 
-    if (!isSync && (!asset.isVisible || asset.sidecarPath)) {
+    if (!isSync && (!asset.isVisible || asset.sidecarPath) && !asset.isExternal) {
       return JobStatus.FAILED;
     }
 
@@ -721,6 +718,13 @@ export class MetadataService extends BaseService {
       sidecarPath = sidecarPathWithExt;
     } else if (sidecarPathWithoutExtExists) {
       sidecarPath = sidecarPathWithoutExt;
+    }
+
+    if (asset.isExternal) {
+      if (sidecarPath !== asset.sidecarPath) {
+        await this.assetRepository.update({ id: asset.id, sidecarPath });
+      }
+      return JobStatus.SUCCESS;
     }
 
     if (sidecarPath) {

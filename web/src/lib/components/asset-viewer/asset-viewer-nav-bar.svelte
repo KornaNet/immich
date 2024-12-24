@@ -9,10 +9,12 @@
   import FavoriteAction from '$lib/components/asset-viewer/actions/favorite-action.svelte';
   import RestoreAction from '$lib/components/asset-viewer/actions/restore-action.svelte';
   import SetAlbumCoverAction from '$lib/components/asset-viewer/actions/set-album-cover-action.svelte';
+  import SetFeaturedPhotoAction from '$lib/components/asset-viewer/actions/set-person-featured-action.svelte';
   import SetProfilePictureAction from '$lib/components/asset-viewer/actions/set-profile-picture-action.svelte';
   import ShareAction from '$lib/components/asset-viewer/actions/share-action.svelte';
   import ShowDetailAction from '$lib/components/asset-viewer/actions/show-detail-action.svelte';
   import UnstackAction from '$lib/components/asset-viewer/actions/unstack-action.svelte';
+  import KeepThisDeleteOthersAction from '$lib/components/asset-viewer/actions/keep-this-delete-others.svelte';
   import CircleIconButton from '$lib/components/elements/buttons/circle-icon-button.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/button-context-menu.svelte';
   import MenuOption from '$lib/components/shared-components/context-menu/menu-option.svelte';
@@ -26,6 +28,7 @@
     AssetTypeEnum,
     type AlbumResponseDto,
     type AssetResponseDto,
+    type PersonResponseDto,
     type StackResponseDto,
   } from '@immich/sdk';
   import {
@@ -49,6 +52,7 @@
   interface Props {
     asset: AssetResponseDto;
     album?: AlbumResponseDto | null;
+    person?: PersonResponseDto | null;
     stack?: StackResponseDto | null;
     showDetailButton: boolean;
     showSlideshow?: boolean;
@@ -66,6 +70,7 @@
   let {
     asset,
     album = null,
+    person = null,
     stack = null,
     showDetailButton,
     showSlideshow = false,
@@ -99,10 +104,7 @@
   <div class="text-white">
     <CloseAction {onClose} />
   </div>
-  <div
-    class="flex w-[calc(100%-3rem)] justify-end gap-2 overflow-hidden text-white"
-    data-testid="asset-viewer-navbar-actions"
-  >
+  <div class="flex gap-2 overflow-x-auto text-white" data-testid="asset-viewer-navbar-actions">
     {#if !asset.isTrashed && $user}
       <ShareAction {asset} />
     {/if}
@@ -166,9 +168,13 @@
         {#if isOwner}
           {#if stack}
             <UnstackAction {stack} {onAction} />
+            <KeepThisDeleteOthersAction {stack} {asset} {onAction} />
           {/if}
           {#if album}
             <SetAlbumCoverAction {asset} {album} />
+          {/if}
+          {#if person}
+            <SetFeaturedPhotoAction {asset} {person} />
           {/if}
           {#if asset.type === AssetTypeEnum.Image}
             <SetProfilePictureAction {asset} />

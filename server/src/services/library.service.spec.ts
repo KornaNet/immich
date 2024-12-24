@@ -122,13 +122,6 @@ describe(LibraryService.name, () => {
 
       expect(cronMock.create).not.toHaveBeenCalled();
     });
-
-    it('should not initialize watcher or library scan job when running on api', async () => {
-      configMock.getWorker.mockReturnValue(ImmichWorker.API);
-      await sut.onConfigInit({ newConfig: systemConfigStub.libraryScan as SystemConfig });
-
-      expect(cronMock.create).not.toHaveBeenCalled();
-    });
   });
 
   describe('onConfigUpdateEvent', () => {
@@ -421,7 +414,6 @@ describe(LibraryService.name, () => {
             localDateTime: expect.any(Date),
             type: AssetType.IMAGE,
             originalFileName: 'photo.jpg',
-            sidecarPath: null,
             isExternal: true,
           },
         ],
@@ -430,57 +422,9 @@ describe(LibraryService.name, () => {
       expect(jobMock.queue.mock.calls).toEqual([
         [
           {
-            name: JobName.METADATA_EXTRACTION,
+            name: JobName.SIDECAR_DISCOVERY,
             data: {
               id: assetStub.image.id,
-              source: 'upload',
-            },
-          },
-        ],
-      ]);
-    });
-
-    it('should import a new asset with sidecar', async () => {
-      const mockLibraryJob: ILibraryFileJob = {
-        id: libraryStub.externalLibrary1.id,
-        ownerId: mockUser.id,
-        assetPath: '/data/user1/photo.jpg',
-      };
-
-      assetMock.getByLibraryIdAndOriginalPath.mockResolvedValue(null);
-      assetMock.create.mockResolvedValue(assetStub.image);
-      storageMock.checkFileExists.mockResolvedValue(true);
-      libraryMock.get.mockResolvedValue(libraryStub.externalLibrary1);
-
-      await expect(sut.handleSyncFile(mockLibraryJob)).resolves.toBe(JobStatus.SUCCESS);
-
-      expect(assetMock.create.mock.calls).toEqual([
-        [
-          {
-            ownerId: mockUser.id,
-            libraryId: libraryStub.externalLibrary1.id,
-            checksum: expect.any(Buffer),
-            originalPath: '/data/user1/photo.jpg',
-            deviceAssetId: expect.any(String),
-            deviceId: 'Library Import',
-            fileCreatedAt: expect.any(Date),
-            fileModifiedAt: expect.any(Date),
-            localDateTime: expect.any(Date),
-            type: AssetType.IMAGE,
-            originalFileName: 'photo.jpg',
-            sidecarPath: '/data/user1/photo.jpg.xmp',
-            isExternal: true,
-          },
-        ],
-      ]);
-
-      expect(jobMock.queue.mock.calls).toEqual([
-        [
-          {
-            name: JobName.METADATA_EXTRACTION,
-            data: {
-              id: assetStub.image.id,
-              source: 'upload',
             },
           },
         ],
@@ -514,7 +458,6 @@ describe(LibraryService.name, () => {
             localDateTime: expect.any(Date),
             type: AssetType.VIDEO,
             originalFileName: 'video.mp4',
-            sidecarPath: null,
             isExternal: true,
           },
         ],
@@ -523,10 +466,9 @@ describe(LibraryService.name, () => {
       expect(jobMock.queue.mock.calls).toEqual([
         [
           {
-            name: JobName.METADATA_EXTRACTION,
+            name: JobName.SIDECAR_DISCOVERY,
             data: {
               id: assetStub.image.id,
-              source: 'upload',
             },
           },
         ],
